@@ -26,6 +26,11 @@ library(randomForest)
 
 ## Data Prepration
 
+You may download the training and testing datasets from below mentioned links respectively
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv  
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
 ```{r}
 #Loading Data
 pmlTesting <- read.csv("pml-testing.csv")
