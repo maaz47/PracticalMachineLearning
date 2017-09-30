@@ -1,0 +1,111 @@
+---
+title: "PracticalMachineLearningProject"
+author: "MaazKhan"
+date: "September 24, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+### Enviroment Prepration
+
+```{r}
+rm(list=ls())
+library(knitr)
+library(caret)
+library(rpart)
+library(rattle)
+library(randomForest)
+```
+
+## Data Prepration
+
+```{r}
+#Loading Data
+pmlTesting <- read.csv("pml-testing.csv")
+pmlTraining <- read.csv("pml-training.csv")
+
+colnames_train <- colnames(pmlTraining)
+colnames_test <- colnames(pmlTesting)
+
+#Check If Test and Train data have same variables
+all.equal(colnames_train[1:length(colnames_train)-1], colnames_test[1:length(colnames_train)-1])
+
+dim(pmlTraining)
+dim(pmlTesting)
+
+#Remove Variables that are not important
+nzv <- nearZeroVar(pmlTraining)
+pmlTraining <- pmlTraining[,-nzv]
+pmlTesting <- pmlTesting[,-nzv]
+
+#Dealing with NA's 
+mostNA <- sapply(pmlTraining, function(x) mean(is.na(x))) > 0.95
+pmlTraining <- pmlTraining[,mostNA==FALSE]
+pmlTesting <- pmlTesting[,mostNA==FALSE]
+
+dim(pmlTraining)
+dim(pmlTesting)
+
+pmlTraining <- pmlTraining[, -c(1:7)]
+pmlTesting <- pmlTesting[, -c(1:7)]
+
+#Creation of Training and Validating Data
+inTrain <- createDataPartition(pmlTraining$classe,p = 0.7,list = FALSE)
+myTraining<- pmlTraining[inTrain,]
+myValidate <- pmlTraining[-inTrain,] 
+
+```
+Lets Plot the classe variable and see how data is distributed  
+
+```{r}
+pal <- colorRampPalette(c("coral","coral2"))
+ggplot(myTraining,aes(classe))+
+  geom_bar(fill=pal(5))+
+  ggtitle("Count for Each Type of Excercise")
+
+```    
+  
+Its shown that `A` type excersie has highest frequency 
+
+# MOdel Building  
+
+## Classification Tree  
+```{r cache=TRUE}
+set.seed(47)
+modelCT <- rpart(classe~., data = myTraining,method = "class")
+fancyRpartPlot(modelCT)
+
+pred_modelCT <- predict(modelCT,newdata = myValidate,type = "class")
+cmCT <- confusionMatrix(pred_modelCT,myValidate$classe)
+cmCT$table
+```
+The Accuracy of classification tree has been quite high.  
+From the confusion matrix, the accuracy rate is 0.99 almost, and so the out-of-sample error rate is 0.01. Using classification tree  predicts the outcome classe very well.
+Lets try it with Random Forest  
+
+## Random Forest
+```{r}
+set.seed(47)
+modelRF <- randomForest(classe~.,data = myTraining)
+pred_modelRF <- predict(modelRF,myValidate)
+cmRF <- confusionMatrix(pred_modelRF,myValidate$classe)
+cmRF$table
+```
+The Accuracy is the same as Classification Tree.
+From the confusion matrix, the accuracy rate is 0.99 almost, and so the out-of-sample error rate is 0.01.
+
+## Applying Our Model on Test Data
+
+Random Forest : 0.99
+Decision Tree : 0.99  
+In that case, we can use any of the model to predict the 20 quiz results (testing dataset) as shown below.
+```{r}
+predictTEST <- predict(modelRF, newdata=pmlTesting)
+predictTEST
+```
